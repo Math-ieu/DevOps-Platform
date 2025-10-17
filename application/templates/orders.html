@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Commandes - TechShop{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="orders-page">
+        <div class="page-header">
+            <h1><i class="fas fa-list"></i> Liste des commandes</h1>
+            <a href="/" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour au catalogue
+            </a>
+        </div>
+
+        {% if orders %}
+        <div class="orders-grid">
+            {% for order in orders %}
+            <div class="order-card">
+                <div class="order-header">
+                    <div class="order-id">
+                        <i class="fas fa-hashtag"></i>
+                        <span>Commande #{{ order.id }}</span>
+                    </div>
+                    <span class="order-status status-{{ order.status }}">
+                        {% if order.status == 'pending' %}
+                        <i class="fas fa-clock"></i> En attente
+                        {% elif order.status == 'confirmed' %}
+                        <i class="fas fa-check"></i> Confirmée
+                        {% elif order.status == 'shipped' %}
+                        <i class="fas fa-shipping-fast"></i> Expédiée
+                        {% elif order.status == 'delivered' %}
+                        <i class="fas fa-box-open"></i> Livrée
+                        {% elif order.status == 'cancelled' %}
+                        <i class="fas fa-times"></i> Annulée
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="order-info">
+                    <div class="info-row">
+                        <i class="fas fa-user"></i>
+                        <span>{{ order.customer_name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fas fa-envelope"></i>
+                        <span>{{ order.customer_email }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fas fa-calendar"></i>
+                        <span>{{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                    </div>
+                </div>
+
+                <div class="order-items">
+                    <h3><i class="fas fa-box"></i> Articles ({{ order.items|length }})</h3>
+                    {% for item in order.items %}
+                    <div class="order-item">
+                        <div class="item-info">
+                            <span class="item-name">{{ item.product.name }}</span>
+                            <span class="item-qty">x {{ item.quantity }}</span>
+                        </div>
+                        <span class="item-price">{{ "%.2f"|format(item.price * item.quantity) }} DH</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="order-footer">
+                    <div class="order-total">
+                        <span>Total:</span>
+                        <span class="total-amount">{{ "%.2f"|format(order.total_amount) }} DH</span>
+                    </div>
+                    <button class="btn btn-sm btn-primary view-details" data-order-id="{{ order.id }}">
+                        <i class="fas fa-eye"></i> Détails
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-shopping-bag"></i>
+            <h3>Aucune commande</h3>
+            <p>Vous n'avez pas encore passé de commande.</p>
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-shopping-cart"></i> Commencer mes achats
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal" id="orderModal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2><i class="fas fa-receipt"></i> Détails de la commande</h2>
+            <button class="close-modal" id="closeModal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="orderDetails">
+            <!-- Content will be loaded dynamically -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="closeModalBtn">
+                <i class="fas fa-times"></i> Fermer
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const orderModal = document.getElementById('orderModal');
+    const closeModal = document.getElementById('closeModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const orderDetails = document.getElementById('orderDetails');
+
+    // View order details
+    document.querySelectorAll('.view-details').forEach(button => {
+        button.addEventListener('click', async function() {
+            const orderId = this.dataset.orderId;
+            
+            // Show loading state
+            orderDetails.innerHTML = '<div style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i></div>';
+            orderModal.style.display = 'flex';
+            
+            try {
+                const response = await fetch(`/api/orders/${orderId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const order = result.data;
+                    
+                    // Status translation
+                    const statusLabels = {
+                        'pending': 'En attente',
+                        'confirmed': 'Confirmée',
+                        'shipped': 'Expédiée',
+                        'delivered': 'Livrée',
+                        'cancelled': 'Annulée'
+                    };
+                    
+                    orderDetails.innerHTML = `
+                        <div class="order-detail-content">
+                            <div class="detail-section">
+                                <h3><i class="fas fa-info-circle"></i> Informations</h3>
+                                <table class="detail-table">
+                                    <tr>
+                                        <td><strong>Numéro:</strong></td>
+                                        <td>#${order.id}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Client:</strong></td>
+                                        <td>${order.customer_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Email:</strong></td>
+                                        <td>${order.customer_email}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Date:</strong></td>
+                                        <td>${new Date(order.created_at).toLocaleString('fr-FR')}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Statut:</strong></td>
+                                        <td><span class="status-badge status-${order.status}">${statusLabels[order.status] || order.status}</span></td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <div class="detail-section">
+                                <h3><i class="fas fa-box"></i> Articles commandés</h3>
+                                <div class="detail-items">
+                                    ${order.items.map(item => `
+                                        <div class="detail-item">
+                                            <div class="detail-item-info">
+                                                <strong>${item.product.name}</strong>
+                                                <span class="detail-item-meta">
+                                                    ${item.product.category} - ${item.price.toFixed(2)} DH x ${item.quantity}
+                                                </span>
+                                            </div>
+                                            <span class="detail-item-total">${(item.price * item.quantity).toFixed(2)} DH</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <div class="detail-section">
+                                <div class="detail-total">
+                                    <span><strong>Total de la commande:</strong></span>
+                                    <span class="total-amount-large">${order.total_amount.toFixed(2)} DH</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    window.showNotification('Erreur lors du chargement des détails de la commande', 'warning');
+                    orderModal.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.showNotification('Erreur lors du chargement des détails de la commande', 'warning');
+                orderModal.style.display = 'none';
+            }
+        });
+    });
+
+    // Close modal handlers
+    if (closeModal) {
+        closeModal.addEventListener('click', function() {
+            orderModal.style.display = 'none';
+        });
+    }
+
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', function() {
+            orderModal.style.display = 'none';
+        });
+    }
+
+    // Close modal when clicking outside
+    if (orderModal) {
+        orderModal.addEventListener('click', function(e) {
+            if (e.target === orderModal) {
+                orderModal.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

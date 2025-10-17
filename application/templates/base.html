@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TechShop - Votre boutique high-tech{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-wrapper">
+                <a href="/" class="logo">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span>TechShop</span>
+                </a>
+                
+                <div class="nav-links">
+                    <a href="/" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                        <i class="fas fa-home"></i> Accueil
+                    </a>
+                    <a href="/orders" class="nav-link {% if request.endpoint == 'orders_list' %}active{% endif %}">
+                        <i class="fas fa-list"></i> Commandes
+                    </a>
+                    <a href="#" class="nav-link" id="cartBtn">
+                        <i class="fas fa-shopping-cart"></i> 
+                        Panier <span class="cart-badge" id="cartCount">0</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3><i class="fas fa-shopping-bag"></i> TechShop</h3>
+                    <p>Votre destination pour les meilleurs produits high-tech</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Navigation</h4>
+                    <ul>
+                        <li><a href="/">Accueil</a></li>
+                        <li><a href="/orders">Commandes</a></li>
+                        <li><a href="/api/products">API</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact</h4>
+                    <ul>
+                        <li><i class="fas fa-envelope"></i> contact@techshop.com</li>
+                        <li><i class="fas fa-phone"></i> +212 123 456 789</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TechShop. Tous droits réservés.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h2><i class="fas fa-shopping-cart"></i> Mon Panier</h2>
+            <button class="close-cart" id="closeCart">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cart-items" id="cartItems"></div>
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cartTotal">0.00 DH</span>
+            </div>
+            <button class="btn btn-primary btn-block" id="checkoutBtn">
+                <i class="fas fa-credit-card"></i> Commander
+            </button>
+        </div>
+    </div>
+
+    <div class="cart-overlay" id="cartOverlay"></div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

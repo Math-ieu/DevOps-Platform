@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Commander - TechShop{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="checkout-page">
+        <h1><i class="fas fa-credit-card"></i> Finaliser la commande</h1>
+
+        <div class="checkout-container">
+            <!-- Order Summary -->
+            <div class="checkout-summary">
+                <h2><i class="fas fa-shopping-cart"></i> Récapitulatif</h2>
+                <div class="summary-items" id="summaryItems"></div>
+                <div class="summary-total">
+                    <span>Total:</span>
+                    <span id="summaryTotal">0.00 DH</span>
+                </div>
+            </div>
+
+            <!-- Checkout Form -->
+            <div class="checkout-form-container">
+                <h2><i class="fas fa-user"></i> Vos informations</h2>
+                <form id="checkoutForm">
+                    <div class="form-group">
+                        <label for="customerName">
+                            <i class="fas fa-user"></i> Nom complet *
+                        </label>
+                        <input type="text" 
+                               id="customerName" 
+                               name="customerName" 
+                               class="form-control" 
+                               required 
+                               placeholder="Jean Dupont">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customerEmail">
+                            <i class="fas fa-envelope"></i> Email *
+                        </label>
+                        <input type="email" 
+                               id="customerEmail" 
+                               name="customerEmail" 
+                               class="form-control" 
+                               required 
+                               placeholder="jean.dupont@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customerPhone">
+                            <i class="fas fa-phone"></i> Téléphone
+                        </label>
+                        <input type="tel" 
+                               id="customerPhone" 
+                               name="customerPhone" 
+                               class="form-control" 
+                               placeholder="+212 6XX XXX XXX">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customerAddress">
+                            <i class="fas fa-map-marker-alt"></i> Adresse de livraison
+                        </label>
+                        <textarea id="customerAddress" 
+                                  name="customerAddress" 
+                                  class="form-control" 
+                                  rows="3" 
+                                  placeholder="Votre adresse complète"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="orderNotes">
+                            <i class="fas fa-comment"></i> Notes (optionnel)
+                        </label>
+                        <textarea id="orderNotes" 
+                                  name="orderNotes" 
+                                  class="form-control" 
+                                  rows="3" 
+                                  placeholder="Informations complémentaires..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-large">
+                            <i class="fas fa-check"></i> Confirmer la commande
+                        </button>
+                        <a href="/" class="btn btn-secondary btn-large">
+                            <i class="fas fa-arrow-left"></i> Continuer mes achats
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal" id="successModal">
+    <div class="modal-content">
+        <div class="modal-header success">
+            <i class="fas fa-check-circle"></i>
+            <h2>Commande confirmée !</h2>
+        </div>
+        <div class="modal-body">
+            <p>Votre commande a été enregistrée avec succès.</p>
+            <p>Numéro de commande: <strong id="orderNumber"></strong></p>
+            <p>Vous recevrez un email de confirmation à l'adresse indiquée.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" id="viewOrderBtn">
+                <i class="fas fa-eye"></i> Voir ma commande
+            </button>
+            <a href="/" class="btn btn-secondary">
+                <i class="fas fa-home"></i> Retour à l'accueil
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const summaryItems = document.getElementById('summaryItems');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const checkoutForm = document.getElementById('checkoutForm');
+    const successModal = document.getElementById('successModal');
+
+    // Check if cart is empty
+    if (cart.length === 0) {
+        window.location.href = '/';
+        return;
+    }
+
+    // Display cart items
+    let total = 0;
+    const itemsMap = {};
+
+    cart.forEach(item => {
+        if (!itemsMap[item.id]) {
+            itemsMap[item.id] = { ...item, quantity: 0 };
+        }
+        itemsMap[item.id].quantity++;
+        total += item.price;
+    });
+
+    Object.values(itemsMap).forEach(item => {
+        const itemElement = document.createElement('div');
+        itemElement.className = 'summary-item';
+        itemElement.innerHTML = `
+            <div class="summary-item-info">
+                <span class="summary-item-name">${item.name}</span>
+                <span class="summary-item-qty">x ${item.quantity}</span>
+            </div>
+            <span class="summary-item-price">${(item.price * item.quantity).toFixed(2)} DH</span>
+        `;
+        summaryItems.appendChild(itemElement);
+    });
+
+    summaryTotal.textContent = `${total.toFixed(2)} DH`;
+
+    // Handle form submission
+    checkoutForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = {
+            customer_name: document.getElementById('customerName').value,
+            customer_email: document.getElementById('customerEmail').value,
+            items: Object.values(itemsMap).map(item => ({
+                product_id: parseInt(item.id),
+                quantity: item.quantity
+            }))
+        };
+
+        try {
+            const response = await fetch('/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                localStorage.removeItem('cart');
+                document.getElementById('orderNumber').textContent = result.data.id;
+                successModal.style.display = 'flex';
+                
+                document.getElementById('viewOrderBtn').addEventListener('click', function() {
+                    window.location.href = '/orders';
+                });
+            } else {
+                alert('Erreur: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Une erreur est survenue lors de la commande');
+        }
+    });
+});
+</script>
+{% endblock %}
