@@ -17,5 +17,5 @@ class Config:
         SQLALCHEMY_DATABASE_URI = 'sqlite:///shop.db'
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    APP_VERSION = os.getenv('APP_VERSION', '1.0.0')
+    APP_VERSION = os.getenv('APP_VERSION', '1.0.0') 
     APP_NAME = 'TechShop'
